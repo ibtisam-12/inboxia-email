@@ -1,6 +1,6 @@
 # 📧 Inboxia
 
-Inboxia is a secure, modern Gmail client built with React, Redux Toolkit, Firebase Authentication, and a Node.js/Express backend. All email operations (inbox, send, reply) are performed via the backend using the Gmail API. No email content is stored in the database; the backend acts as a stateless proxy.
+Inboxia is a secure, modern Gmail client built with React, Redux Toolkit, Firebase Authentication, and a Node.js/Express backend. All email operations (inbox, send, reply) are performed via the backend using the Gmail API. No email content is stored in the database; the backend acts as a stateless proxy. The application features a unified inbox that combines both inbox and spam emails into a single view.
 
 ---
 
@@ -9,6 +9,7 @@ Inboxia is a secure, modern Gmail client built with React, Redux Toolkit, Fireba
 - **Google Sign-In** via Firebase Authentication with OAuth2
 - **Redux Toolkit** for efficient state management
 - **Inbox, Compose, Reply** email operations
+- **Unified Inbox** combining both inbox and spam emails
 - **Backend proxy** for Gmail API (no direct Gmail API calls from frontend)
 - **Secure token management** with access token and refresh token handling
 - **No email content stored** in the backend database
@@ -30,6 +31,7 @@ inboxia/
 │   │       ├── sendEmailController.js
 │   │       ├── replyEmailController.js
 │   │       └── getEmailByIdController.js
+│   │       └── getUnifiedInboxController.js
 │   ├── dtos/
 │   │   └── email.dto.js
 │   ├── middlewares/
@@ -128,13 +130,14 @@ PORT=5000
 
 Start the backend:
 ```bash
+cd backend
 npm start
 ```
 
 ### 3. **Frontend Setup**
 
 ```bash
-cd ../frontend
+cd frontend
 npm install
 ```
 
@@ -224,11 +227,27 @@ Backend sends clean, predictable data to frontend
 Frontend updates Redux store and UI
 ```
 
+#### 3. **Unified Inbox Flow**
+The unified inbox combines both inbox and spam emails into a single view:
+```
+User views inbox in UI
+    ↓
+Frontend calls /api/email/unified-inbox endpoint
+    ↓
+Backend fetches both inbox and spam emails from Gmail API
+    ↓
+Emails are combined, deduplicated, and sorted by date
+    ↓
+Backend returns unified email list to frontend
+    ↓
+Frontend displays emails with visual indicators for spam
+```
+
 ---
 
 ### **Backend Modularity**
 
-- **Controllers**: Handle HTTP requests, call services, and return DTOs.
+- **Controllers**: Handle HTTP requests, call services, and return DTOs. Includes controllers for inbox, send, reply, get email by ID, and unified inbox operations.
 - **Services**: Contain all Gmail API logic.
 - **DTOs**: Shape and sanitize data sent to the frontend.
 - **Middleware**: Handles authentication and error responses.
@@ -242,6 +261,7 @@ Frontend updates Redux store and UI
 - `GET /message/:id` - Gets specific email content
 - `POST /send` - Sends new email
 - `POST /reply` - Replies to an email
+- `GET /unified-inbox` - Fetches unified inbox combining inbox and spam emails
 
 #### **Authentication Routes (`/api/auth`)**
 - `POST /tokens` - Receives and logs tokens from frontend (for demo/logging only)
@@ -265,40 +285,8 @@ Frontend updates Redux store and UI
 3. **API Proxy**: Backend acts as secure proxy to Gmail API
 4. **State Management**: Redux manages application state
 5. **UI Updates**: React components re-render based on state changes
-6. **Security**: No sensitive data stored, all operations validated
+6. **Unified Inbox**: Combines inbox and spam emails into a single view
+7. **Security**: No sensitive data stored, all operations validated
 
 ---
 
-## 📱 Available Scripts
-
-### Backend
-- `npm start` - Start the production server
-
-### Frontend
-- `npm start` - Start development server
-- `npm run build` - Build for production
-- `npm test` - Run tests
-- `npm run eject` - Eject from Create React App
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 🙏 Acknowledgments
-
-- Google Gmail API documentation
-- Firebase Authentication
-- React and Redux communities
-- All contributors and testers
-
----
-
-**Happy coding with Inboxia! 📧✨**
