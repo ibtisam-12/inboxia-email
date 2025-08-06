@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListGroup, Button, Spinner, Alert } from 'react-bootstrap';
+import { ListGroup, Button, Spinner, Alert, Badge } from 'react-bootstrap';
 
 const Inbox = ({
   emails,
@@ -26,7 +26,7 @@ const Inbox = ({
           key={email.emailId}
           as="div"
           className="email-item"
-          onClick={() => handleEmailClick(email.emailId)} // Pass emailId
+          onClick={() => handleEmailClick(email.emailId)}
           style={{
             cursor: 'pointer',
             borderLeft: '4px solid #007bff',
@@ -38,6 +38,9 @@ const Inbox = ({
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <h6 className="mb-1 text-truncate" style={{ fontWeight: 'bold' }}>
                   {email.subject || 'No Subject'}
+                  {email.source === "spam" && (
+                    <Badge bg="danger" className="ms-2">Spam</Badge>
+                  )}
                 </h6>
                 <small className="text-muted">
                   {email.date ? new Date(email.date).toLocaleDateString() : ''}

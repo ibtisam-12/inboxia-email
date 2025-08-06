@@ -34,7 +34,7 @@ const EmailOperations = ({ activeView }) => {
     dispatch(setLoading(true));
     dispatch(clearErrors());
     try {
-      const response = await api.get('/email/inbox', {
+      const response = await api.get('/email/unified-inbox', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'x-refresh-token': refreshToken

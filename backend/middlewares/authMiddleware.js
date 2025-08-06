@@ -4,8 +4,14 @@ export default (req, res, next) => {
   if (!accessToken) {
     return res.status(401).json({ error: 'Missing access token' });
   }
-  // Optionally, you can attach the token to req for use in controllers
+  
+  const refreshToken = req.headers['x-refresh-token'];
+  if (!refreshToken) {
+    return res.status(401).json({ error: 'Missing refresh token' });
+  }
+  
+  // Attach the tokens to req for use in controllers
   req.accessToken = accessToken;
-  req.refreshToken = req.headers['x-refresh-token'];
+  req.refreshToken = refreshToken;
   next();
 };
