@@ -29,8 +29,8 @@ const Auth = () => {
       const refreshToken = user.stsTokenManager.refreshToken; // <-- Get refresh token
 
       // Debug: log tokens (remove in production)
-      console.log('🔑 OAuth Access Token:', oauthAccessToken);
-      console.log('🔑 Refresh Token:', refreshToken);
+      // console.log(' OAuth Access Token:', oauthAccessToken);
+      // console.log(' Refresh Token:', refreshToken);
 
       if (!oauthAccessToken) {
         throw new Error('No OAuth access token received. Please ensure Gmail API scopes are configured.');
