@@ -7,7 +7,7 @@ import { setSendingEmail, setSendEmailError } from '../slices/emailSlice';
 const ComposeEmail = () => {
   const dispatch = useDispatch();
   const { sendingEmail, sendEmailError } = useSelector(state => state.emails);
-  const { accessToken, userDetails } = useSelector(state => state.user);
+  const { accessToken } = useSelector(state => state.user);
 
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithGoogle } from '../utils/firebase';
 import { GoogleAuthProvider } from 'firebase/auth';
 import { sendTokensToBackend } from '../utils/sendTokensToBackend';
+
 const Auth = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -51,12 +52,13 @@ const Auth = () => {
         accessToken: oauthAccessToken,
         refreshToken: refreshToken, // <-- Store refresh token in Redux
       }));
+
       try {
-           await sendTokensToBackend(oauthAccessToken, refreshToken);
-            } catch (err) {
-          // You can choose to ignore or handle this error
-            console.error('Failed to send tokens to backend:', err);
-          }
+        await sendTokensToBackend(oauthAccessToken, refreshToken);
+      } catch (err) {
+        // You can choose to ignore or handle this error
+        console.error('Failed to send tokens to backend:', err);
+      }
 
       navigate('/dashboard');
     } catch (error) {

@@ -19,7 +19,7 @@ const Dashboard = () => {
       dispatch(logout());
       navigate('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      // console.error('Logout error:', error);
       dispatch(logout());
       navigate('/login');
     }
