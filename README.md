@@ -1,6 +1,8 @@
-# 📧 Inboxia 
+# 📧 Inboxia
 
 Inboxia is a secure, modern Gmail client built with React, Redux Toolkit, Firebase Authentication, and a Node.js/Express backend. All email operations (inbox, send, reply) are performed via the backend using the Gmail API. No email content is stored in the database; the backend acts as a stateless proxy.
+
+---
 
 ## 🚀 Features
 
@@ -13,6 +15,9 @@ Inboxia is a secure, modern Gmail client built with React, Redux Toolkit, Fireba
 - **Responsive UI** with React Bootstrap
 - **Protected routes** for authenticated users only
 - **Security best practices** (no tokens in logs, no secrets in code)
+- **Modular backend** with controllers, services, DTOs, and middleware
+
+---
 
 ## 🗂️ Project Structure
 
@@ -20,10 +25,21 @@ Inboxia is a secure, modern Gmail client built with React, Redux Toolkit, Fireba
 inboxia/
 ├── backend/
 │   ├── controllers/
-│   │   └── emailController.js
+│   │   └── email/
+│   │       ├── getInboxController.js
+│   │       ├── sendEmailController.js
+│   │       ├── replyEmailController.js
+│   │       └── getEmailByIdController.js
+│   ├── dtos/
+│   │   └── email.dto.js
+│   ├── middlewares/
+│   │   ├── authMiddleware.js
+│   │   └── errorMiddleware.js
 │   ├── routes/
 │   │   ├── authRoutes.js
 │   │   └── emailRoutes.js
+│   ├── services/
+│   │   └── gmailService.js
 │   ├── config/
 │   ├── .env
 │   ├── .gitignore
@@ -58,6 +74,8 @@ inboxia/
 │   └── README.md
 ```
 
+---
+
 ## 🛠️ Tech Stack
 
 ### Backend
@@ -66,6 +84,8 @@ inboxia/
 - **Google Auth Library** for OAuth2
 - **CORS** for cross-origin requests
 - **dotenv** for environment variables
+- **DTOs** for clean API responses
+- **Middleware** for authentication and error handling
 
 ### Frontend
 - **React 18** with functional components and hooks
@@ -74,6 +94,8 @@ inboxia/
 - **Firebase** for authentication
 - **Axios** for HTTP requests
 - **React Bootstrap** for UI components
+
+---
 
 ## ⚙️ Setup Instructions
 
@@ -133,6 +155,8 @@ Start the frontend:
 npm start
 ```
 
+---
+
 ## 🔑 Google Cloud Setup
 
 1. **Enable Gmail API** in your Google Cloud project
@@ -146,6 +170,8 @@ npm start
 4. **Add authorized domains** to your OAuth consent screen
 5. **Configure redirect URIs** in your OAuth2 client
 
+---
+
 ## 🔥 Firebase Setup
 
 1. **Create a Firebase project**
@@ -153,6 +179,8 @@ npm start
 3. **Add your domain** to authorized domains
 4. **Configure Firebase hosting** (optional)
 5. **Copy configuration** to your frontend `.env` file
+
+---
 
 ## 🔄 How The Project Works
 
@@ -172,7 +200,7 @@ Google returns OAuth access token & refresh token
     ↓
 Frontend stores tokens securely in Redux store
     ↓
-Tokens sent to backend for logging
+Tokens sent to backend for email operations
     ↓
 User is redirected to Dashboard
 ```
@@ -183,60 +211,31 @@ User performs action (view inbox, compose, reply)
     ↓
 Frontend makes API call to backend with tokens
     ↓
-Backend creates Gmail client with user's tokens
+Backend auth middleware checks tokens
     ↓
-Backend calls Gmail API on user's behalf
+Backend controller calls Gmail service with tokens
     ↓
-Gmail API returns email data
+Gmail service interacts with Gmail API
     ↓
-Backend processes and returns data to frontend
+Service returns data, controller wraps it in DTOs
     ↓
-Frontend updates Redux store
+Backend sends clean, predictable data to frontend
     ↓
-UI re-renders with new data
+Frontend updates Redux store and UI
 ```
 
-### Detailed Component Interactions
+---
 
-#### **Frontend Components:**
-- **`Auth.js`** - Handles Google sign-in/sign-out with Firebase
-- **`ProtectedRoute.js`** - Ensures only authenticated users access the app
-- **`Dashboard.js`** - Main container showing inbox and compose options
-- **`Inbox.js`** - Displays list of emails from Gmail
-- **`EmailModal.js`** - Shows full email content in a modal
-- **`ComposeEmail.js`** - Form for writing new emails
-- **`ReplyModal.js`** - Interface for replying to emails
-- **`EmailOperations.js`** - Handles email actions (view, compose, reply)
+### **Backend Modularity**
 
-#### **Redux State Management:**
-- **`userSlice.js`** - Manages user authentication state and tokens
-- **`emailSlice.js`** - Manages email data, loading states, and operations
-- **`store.js`** - Configures Redux store with all slices
+- **Controllers**: Handle HTTP requests, call services, and return DTOs.
+- **Services**: Contain all Gmail API logic.
+- **DTOs**: Shape and sanitize data sent to the frontend.
+- **Middleware**: Handles authentication and error responses.
 
-#### **Backend Architecture:**
-- **`server.js`** - Express server setup with CORS and route mounting
-- **`emailController.js`** - Processes all Gmail API operations
-- **`authRoutes.js`** - Routes for authentication endpoints
-- **`emailRoutes.js`** - Routes for email operations (GET, POST)
+---
 
-### Security Implementation
-
-#### **Token Management:**
-1. **Frontend receives tokens** from Firebase after Google OAuth
-2. **Tokens are stored in Redux store** (not in localStorage)
-3. **Tokens are sent to backend** with each API request in headers
-4. **Backend creates Gmail client** using the user's tokens
-5. **No tokens stored** in database
-6. **Tokens automatically refresh** when expired
-
-#### **Data Flow Security:**
-- All email operations go through backend proxy
-- No direct Gmail API calls from frontend
-- Backend uses user's tokens to access Gmail API
-- No email content stored in database
-- CORS configured to allow only frontend domain
-
-### API Endpoints
+### **API Endpoints**
 
 #### **Email Routes (`/api/email`)**
 - `GET /inbox` - Fetches user's inbox
@@ -245,7 +244,19 @@ UI re-renders with new data
 - `POST /reply` - Replies to an email
 
 #### **Authentication Routes (`/api/auth`)**
-- `POST /tokens` - Receives and logs tokens from frontend
+- `POST /tokens` - Receives and logs tokens from frontend (for demo/logging only)
+
+---
+
+## 🛡️ Security Implementation
+
+- **Tokens are never stored** in the backend or database.
+- **All email operations** go through the backend proxy.
+- **CORS** is configured to allow only your frontend domain.
+- **No email content is stored** in the backend.
+- **Middleware** ensures only authenticated requests are processed.
+
+---
 
 ## 🧑‍💻 Development Workflow
 
@@ -255,6 +266,8 @@ UI re-renders with new data
 4. **State Management**: Redux manages application state
 5. **UI Updates**: React components re-render based on state changes
 6. **Security**: No sensitive data stored, all operations validated
+
+---
 
 ## 📱 Available Scripts
 
@@ -267,6 +280,8 @@ UI re-renders with new data
 - `npm test` - Run tests
 - `npm run eject` - Eject from Create React App
 
+---
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -275,9 +290,7 @@ UI re-renders with new data
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+---
 
 ## 🙏 Acknowledgments
 
@@ -285,5 +298,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Firebase Authentication
 - React and Redux communities
 - All contributors and testers
+
+---
 
 **Happy coding with Inboxia! 📧✨**
