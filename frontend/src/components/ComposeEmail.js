@@ -7,7 +7,7 @@ import { setSendingEmail, setSendEmailError } from '../slices/emailSlice';
 const ComposeEmail = () => {
   const dispatch = useDispatch();
   const { sendingEmail, sendEmailError } = useSelector(state => state.emails);
-  const { accessToken } = useSelector(state => state.user);
+  const { accessToken, refreshToken } = useSelector(state => state.user);
 
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
@@ -15,11 +15,14 @@ const ComposeEmail = () => {
 
   const handleSendEmail = async () => {
     if (!to.trim() || !subject.trim() || !body.trim()) return alert('Please fill in all fields');
-    if (!accessToken) return dispatch(setSendEmailError('Please login again to send emails.'));
+    if (!accessToken || !refreshToken) return dispatch(setSendEmailError('Please login again to send emails.'));
     dispatch(setSendingEmail(true));
     try {
       await api.post('/email/send', { to, subject, body }, {
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'x-refresh-token': refreshToken
+        }
       });
       setTo(''); setSubject(''); setBody('');
       alert('Email sent successfully!');
