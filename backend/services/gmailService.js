@@ -247,3 +247,46 @@ export async function fetchUnifiedInbox(accessToken, refreshToken) {
     throw error;
   }
 }
+
+export async function fetchUnifiedInboxEmailIds(accessToken, refreshToken) {
+  const [inboxEmails, spamEmails] = await Promise.all([
+    fetchEmailsByLabel(accessToken, refreshToken, 'inbox'),
+    fetchEmailsByLabel(accessToken, refreshToken, 'spam')
+  ]);
+  const allEmails = [...inboxEmails, ...spamEmails];
+  const uniqueEmailIds = Array.from(new Set(allEmails.map(email => email.emailId)));
+  return uniqueEmailIds;
+}
+
+// For each email ID, fetch and log full body + headers
+export async function logFullEmailsByIds(accessToken, refreshToken, emailIds) {
+  const gmail = getGmailClient(accessToken, refreshToken);
+
+  for (const id of emailIds) {
+    try {
+      const msgData = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
+      const headers = {};
+      (msgData.data.payload.headers || []).forEach(h => { headers[h.name] = h.value; });
+
+      // Extract plain text body
+      let body = '';
+      if (msgData.data.payload.parts) {
+        const part = msgData.data.payload.parts.find(p => p.mimeType === 'text/plain');
+        if (part && part.body && part.body.data) {
+          body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+        }
+      } else if (msgData.data.payload.body && msgData.data.payload.body.data) {
+        body = Buffer.from(msgData.data.payload.body.data, 'base64').toString('utf-8');
+      }
+
+      // Log full body and headers
+      console.log('Email:', {
+        emailId: msgData.data.id,
+        headers,
+        body
+      });
+    } catch (error) {
+      console.error(`Error fetching message ${id}:`, error);
+    }
+  }
+}

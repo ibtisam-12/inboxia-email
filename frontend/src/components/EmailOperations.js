@@ -9,6 +9,7 @@ import ComposeEmail from './ComposeEmail';
 import Inbox from './Inbox';
 import EmailModal from './EmailModal';
 import ReplyModal from './ReplyModal';
+import LogUnifiedInboxBodies from './LogUnifiedInboxBodies';
 
 const EmailOperations = ({ activeView }) => {
   const dispatch = useDispatch();

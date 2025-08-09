@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Container, Button, Row, Col, Card, Alert } from 'react-bootstrap';
 import { logout } from '../slices/userSlice';
 import EmailOperations from './EmailOperations';
+import LogUnifiedInboxBodies from './LogUnifiedInboxBodies';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '../utils/firebase';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -99,7 +100,7 @@ const Dashboard = () => {
                     </h4>
                   </Col>
                   <Col md={6} className="text-center">
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', alignItems: 'center' }}>
                       <Button
                         variant={activeView === 'inbox' ? 'primary' : 'outline-light'}
                         onClick={() => handleNavigation('inbox')}
@@ -107,13 +108,16 @@ const Dashboard = () => {
                       >
                         📥 Inbox
                       </Button>
-                      <Button
-                        variant={activeView === 'compose' ? 'primary' : 'outline-light'}
-                        onClick={() => handleNavigation('compose')}
-                        style={{ minWidth: '100px' }}
-                      >
-                        ✏️ Compose
-                      </Button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <Button
+                          variant={activeView === 'compose' ? 'primary' : 'outline-light'}
+                          onClick={() => handleNavigation('compose')}
+                          style={{ minWidth: '100px' }}
+                        >
+                          ✏️ Compose
+                        </Button>
+                        <LogUnifiedInboxBodies />
+                      </div>
                     </div>
                   </Col>
                   <Col md={3} />
