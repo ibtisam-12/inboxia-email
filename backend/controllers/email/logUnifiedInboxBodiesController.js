@@ -1,12 +1,12 @@
-import { fetchUnifiedInboxEmailIds, logFullEmailsByIds } from '../../services/gmailService.js';
+import { fetchUnifiedInboxEmailIds, logFullEmailsByIds,fetchFullEmailsByIds } from '../../services/gmailService.js';
 
 export default async function logUnifiedInboxBodiesController(req, res, next) {
   try {
-    const { accessToken, refreshToken } = req;
-    const emailIds = await fetchUnifiedInboxEmailIds(accessToken, refreshToken);
-    await logFullEmailsByIds(accessToken, refreshToken, emailIds);
-    res.json({ message: 'All unified inbox email bodies and headers printed to backend console.', count: emailIds.length });
+    const { accessToken, refreshToken } = req; // Extract tokens from the request
+    const emailIds = await fetchUnifiedInboxEmailIds(accessToken, refreshToken); // Fetch the list of email IDs
+    const fullEmails = await fetchFullEmailsByIds(accessToken, refreshToken, emailIds); // Fetch the full email data using the IDs
+    res.json(fullEmails); 
   } catch (err) {
-    next(err);
+    next(err); // Pass errors to error-handling middleware
   }
 }

@@ -1,9 +1,11 @@
+// Dashboard.js
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Container, Button, Row, Col, Card, Alert } from 'react-bootstrap';
 import { logout } from '../slices/userSlice';
 import EmailOperations from './EmailOperations';
 import LogUnifiedInboxBodies from './LogUnifiedInboxBodies';
+import FilteredInbox from './FilteredInbox';   // ✅ Import FilteredInbox
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '../utils/firebase';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -12,7 +14,7 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { userDetails, loading } = useSelector((state) => state.user);
-  const [activeView, setActiveView] = useState('inbox');
+  const [activeView, setActiveView] = useState('inbox'); // inbox | compose | filtered
 
   const handleLogout = async () => {
     try {
@@ -20,7 +22,6 @@ const Dashboard = () => {
       dispatch(logout());
       navigate('/login');
     } catch (error) {
-      // console.error('Logout error:', error);
       dispatch(logout());
       navigate('/login');
     }
@@ -96,7 +97,7 @@ const Dashboard = () => {
                 <Row className="align-items-center">
                   <Col md={3}>
                     <h4 style={{ margin: 0, fontWeight: 'bold' }}>
-                      📥 Email
+                      {activeView === 'filtered' ? '🔍 Filtered Inbox' : '📥 Email'}
                     </h4>
                   </Col>
                   <Col md={6} className="text-center">
@@ -108,21 +109,30 @@ const Dashboard = () => {
                       >
                         📥 Inbox
                       </Button>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <Button
-                          variant={activeView === 'compose' ? 'primary' : 'outline-light'}
-                          onClick={() => handleNavigation('compose')}
-                          style={{ minWidth: '100px' }}
-                        >
-                          ✏️ Compose
-                        </Button>
-                        <LogUnifiedInboxBodies />
-                      </div>
+
+                      <Button
+                        variant={activeView === 'compose' ? 'primary' : 'outline-light'}
+                        onClick={() => handleNavigation('compose')}
+                        style={{ minWidth: '100px' }}
+                      >
+                        ✏️ Compose
+                      </Button>
+
+                      <Button
+                        variant={activeView === 'filtered' ? 'primary' : 'outline-light'}
+                        onClick={() => handleNavigation('filtered')}
+                        style={{ minWidth: '120px' }}
+                      >
+                        🔍 Filtered
+                      </Button>
+
+                      <LogUnifiedInboxBodies />
                     </div>
                   </Col>
                   <Col md={3} />
                 </Row>
               </div>
+
               {/* Email Operations Section (scrollable) */}
               <div style={{
                 backgroundColor: 'white',
@@ -131,7 +141,9 @@ const Dashboard = () => {
                 maxHeight: '600px',
                 overflowY: 'auto'
               }}>
-                <EmailOperations activeView={activeView} />
+                {activeView === 'inbox' && <EmailOperations activeView="inbox" />}
+                {activeView === 'compose' && <EmailOperations activeView="compose" />}
+                {activeView === 'filtered' && <FilteredInbox />}
               </div>
             </Card>
           </Col>

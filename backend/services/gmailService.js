@@ -1,5 +1,6 @@
 // services/gmailService.js
 import { google } from 'googleapis';
+import { saveProcessedEmail, isEmailProcessed } from './firebaseService.js';
 
 function getGmailClient(accessToken, refreshToken) {
   // Validate that we have the required environment variables
@@ -288,5 +289,164 @@ export async function logFullEmailsByIds(accessToken, refreshToken, emailIds) {
     } catch (error) {
       console.error(`Error fetching message ${id}:`, error);
     }
+  }
+}
+
+export async function fetchFullEmailsByIds(accessToken, refreshToken, emailIds) {
+  const gmail = getGmailClient(accessToken, refreshToken); // Get the Gmail client with tokens
+  const emails = []; // Array to store email data
+
+  for (const id of emailIds) {
+    try {
+      const msgData = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
+      const headers = {};
+      (msgData.data.payload.headers || []).forEach(h => { headers[h.name] = h.value; });
+
+      // Extract plain text body
+      let body = '';
+      if (msgData.data.payload.parts) {
+        const part = msgData.data.payload.parts.find(p => p.mimeType === 'text/plain');
+        if (part && part.body && part.body.data) {
+          body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+        }
+      } else if (msgData.data.payload.body && msgData.data.payload.body.data) {
+        body = Buffer.from(msgData.data.payload.body.data, 'base64').toString('utf-8');
+      }
+
+      // Add the email data to the array
+      emails.push({
+        emailId: msgData.data.id,
+        headers, // Object with all headers
+        body // Plain text body
+      });
+    } catch (error) {
+      console.error(`Error fetching message ${id}:`, error); // Optional: Keep logging for debugging
+      // Add an error entry to the array for robustness
+      emails.push({ emailId: id, error: error.message });
+    }
+  }
+
+  return emails; // Return the array of email objects
+}
+
+// services/gmailService.js (add these functions to your existing file)
+
+export async function ensureLabel(gmail, labelName) {
+  try {
+    const { data } = await gmail.users.labels.list({ userId: 'me' });
+    const existingLabel = data.labels.find(label => label.name === labelName);
+    
+    if (existingLabel) {
+      return existingLabel.id;
+    }
+
+    const { data: newLabel } = await gmail.users.labels.create({
+      userId: 'me',
+      requestBody: {
+        name: labelName,
+        labelListVisibility: 'labelShow',
+        messageListVisibility: 'show'
+      }
+    });
+
+    return newLabel.id;
+  } catch (error) {
+    console.error(`Error ensuring label ${labelName}:`, error);
+    throw error;
+  }
+}
+
+export async function moveEmailToLabel(gmail, emailId, labelId, removeFromInbox = true) {
+  try {
+    const modifications = {
+      addLabelIds: [labelId]
+    };
+    
+    if (removeFromInbox) {
+      modifications.removeLabelIds = ['INBOX'];
+    }
+
+    await gmail.users.messages.modify({
+      userId: 'me',
+      id: emailId,
+      requestBody: modifications
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error moving email ${emailId}:`, error);
+    return false;
+  }
+}
+function cleanString(str) {
+  if (!str) return '';
+  return str.replace(/[^\w\s]/gi, '').trim().toLowerCase();  // Remove punctuation and extra spaces
+}
+
+export function applyFilters(emails, filters) {
+  if (!emails || emails.length === 0) {
+    console.log('No emails provided to applyFilters');
+    return [];
+  }
+  
+  const { keywords } = filters;  // Expect keywords as a string, e.g., "hiring,internship"
+  const keywordArray = Array.isArray(keywords) ? keywords : (keywords ? keywords.split(',') : []);
+  const keywordArrayCleaned = keywordArray.map(keyword => cleanString(keyword));  // Clean each keyword
+  
+  console.log('Applying filters with cleaned keywords:', keywordArrayCleaned);  // Log cleaned keywords
+  
+  if (keywordArrayCleaned.length === 0 || keywordArrayCleaned.every(k => k === '')) {
+    console.log('No valid keywords provided, returning empty array');
+    return [];  // Return empty array to enforce filters
+  }
+  
+  return emails.filter(email => {
+    const bodyCleaned = cleanString(email.body || '');  // Clean the body
+    const headersString = Object.values(email.headers || {})
+      .map(header => cleanString(header))  // Clean each header
+      .join(' ');  // Join into a single string
+    
+    console.log(`Checking email ${email.emailId}: Cleaned Body: "${bodyCleaned.substring(0, 50)}..." Cleaned Headers: "${headersString.substring(0, 50)}..."`);
+    
+    for (const keyword of keywordArrayCleaned) {
+      if (keyword && (bodyCleaned.includes(keyword) || headersString.includes(keyword))) {
+        console.log(`Match found for keyword "${keyword}" in email ${email.emailId}`);
+        return true;  // At least one match
+      }
+    }
+    
+    console.log(`No matches for email ${email.emailId}`);
+    return false;  // No matches
+  });
+}
+
+export async function applyFiltersAndMoveToLabel(accessToken, refreshToken, emails, filters, folderName) {
+  try {
+    const gmail = getGmailClient(accessToken, refreshToken);
+    const labelId = await ensureLabel(gmail, folderName);  // Ensure the label exists
+    
+    // Filter out already processed emails
+    const filteredEmails = await Promise.all(emails.map(async (email) => {
+      const isProcessed = await isEmailProcessed(email.emailId, folderName);  // Only check emailId and folderName
+      if (isProcessed) {
+        console.log(`Email ${email.emailId} already processed for folder ${folderName}, skipping.`);
+        return null;  // Skip this email
+      }
+      return email;
+    }));
+    
+    const emailsToProcess = filteredEmails.filter(email => email !== null);  // Remove skipped emails
+    
+    const matchingEmails = applyFilters(emailsToProcess, filters);  // Apply filters only to non-processed emails
+    
+    for (const email of matchingEmails) {
+      await moveEmailToLabel(gmail, email.emailId, labelId, false);  // Don't remove from inbox
+      await saveProcessedEmail(email.emailId, folderName, filters);  // Save with filters
+    }
+    
+    return matchingEmails;  // Return the list of newly processed matching emails
+  } catch (error) {
+    console.error('Error applying filters and moving to label:', error);
+    throw error;
   }
 }
