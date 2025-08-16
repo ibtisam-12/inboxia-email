@@ -28,11 +28,11 @@ const LogUnifiedInboxBodies = () => {
       });
       
       setLogSuccess(true);
-      console.log(response.data.message);
-      alert(`Success: ${response.data.message}`);
+      console.log('Unified inbox bodies logged:', response.data.message);
     } catch (error) {
-      setLogError('Failed to log unified inbox bodies.');
       console.error('Error logging unified inbox bodies:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to log unified inbox bodies.';
+      setLogError(errorMessage);
     } finally {
       setLogging(false);
     }

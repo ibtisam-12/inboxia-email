@@ -5,7 +5,8 @@ import { Container, Button, Row, Col, Card, Alert } from 'react-bootstrap';
 import { logout } from '../slices/userSlice';
 import EmailOperations from './EmailOperations';
 import LogUnifiedInboxBodies from './LogUnifiedInboxBodies';
-import FilteredInbox from './FilteredInbox';   // ✅ Import FilteredInbox
+import FilteredInbox from './FilteredInbox';
+import FolderList from './FolderList';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '../utils/firebase';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -14,7 +15,7 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { userDetails, loading } = useSelector((state) => state.user);
-  const [activeView, setActiveView] = useState('inbox'); // inbox | compose | filtered
+  const [activeView, setActiveView] = useState('inbox'); // inbox | compose | filtered | folders
 
   const handleLogout = async () => {
     try {
@@ -97,15 +98,17 @@ const Dashboard = () => {
                 <Row className="align-items-center">
                   <Col md={3}>
                     <h4 style={{ margin: 0, fontWeight: 'bold' }}>
-                      {activeView === 'filtered' ? '🔍 Filtered Inbox' : '📥 Email'}
+                      {activeView === 'filtered' ? '🔍 Filtered Inbox' : 
+                       activeView === 'folders' ? '📁 Folders' : '📥 Email'}
                     </h4>
                   </Col>
                   <Col md={6} className="text-center">
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                       <Button
                         variant={activeView === 'inbox' ? 'primary' : 'outline-light'}
                         onClick={() => handleNavigation('inbox')}
-                        style={{ minWidth: '100px' }}
+                        size="sm"
+                        style={{ minWidth: '80px' }}
                       >
                         📥 Inbox
                       </Button>
@@ -113,7 +116,8 @@ const Dashboard = () => {
                       <Button
                         variant={activeView === 'compose' ? 'primary' : 'outline-light'}
                         onClick={() => handleNavigation('compose')}
-                        style={{ minWidth: '100px' }}
+                        size="sm"
+                        style={{ minWidth: '80px' }}
                       >
                         ✏️ Compose
                       </Button>
@@ -121,9 +125,19 @@ const Dashboard = () => {
                       <Button
                         variant={activeView === 'filtered' ? 'primary' : 'outline-light'}
                         onClick={() => handleNavigation('filtered')}
-                        style={{ minWidth: '120px' }}
+                        size="sm"
+                        style={{ minWidth: '100px' }}
                       >
                         🔍 Filtered
+                      </Button>
+
+                      <Button
+                        variant={activeView === 'folders' ? 'primary' : 'outline-light'}
+                        onClick={() => handleNavigation('folders')}
+                        size="sm"
+                        style={{ minWidth: '80px' }}
+                      >
+                        📁 Folders
                       </Button>
 
                       <LogUnifiedInboxBodies />
@@ -133,7 +147,7 @@ const Dashboard = () => {
                 </Row>
               </div>
 
-              {/* Email Operations Section (scrollable) */}
+              {/* Content Section (scrollable) */}
               <div style={{
                 backgroundColor: 'white',
                 padding: '20px',
@@ -144,6 +158,7 @@ const Dashboard = () => {
                 {activeView === 'inbox' && <EmailOperations activeView="inbox" />}
                 {activeView === 'compose' && <EmailOperations activeView="compose" />}
                 {activeView === 'filtered' && <FilteredInbox />}
+                {activeView === 'folders' && <FolderList />}
               </div>
             </Card>
           </Col>

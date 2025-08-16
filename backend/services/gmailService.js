@@ -450,3 +450,97 @@ export async function applyFiltersAndMoveToLabel(accessToken, refreshToken, emai
     throw error;
   }
 }
+
+export async function fetchAllLabels(accessToken, refreshToken) {
+  try {
+    const gmail = getGmailClient(accessToken, refreshToken);
+    const { data } = await gmail.users.labels.list({ userId: 'me' });
+    
+    // Filter out system labels and only return user-created labels
+    const userLabels = data.labels.filter(label => 
+      label.type === 'user' && 
+      label.name !== 'INBOX' && 
+      label.name !== 'SENT' && 
+      label.name !== 'DRAFT' && 
+      label.name !== 'SPAM' && 
+      label.name !== 'TRASH' &&
+      label.name !== 'IMPORTANT' &&
+      label.name !== 'STARRED' &&
+      label.name !== 'UNREAD'
+    );
+    
+    return userLabels.map(label => ({
+      id: label.id,
+      name: label.name,
+      messageListVisibility: label.messageListVisibility,
+      labelListVisibility: label.labelListVisibility,
+      type: label.type
+    }));
+  } catch (error) {
+    console.error('Error fetching labels:', error);
+    throw error;
+  }
+}
+
+export async function fetchEmailsByFolder(accessToken, refreshToken, folderName) {
+  try {
+    const gmail = getGmailClient(accessToken, refreshToken);
+    
+    // First, get the label ID for the folder name
+    const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
+    const label = labelsData.labels.find(l => l.name === folderName);
+    
+    if (!label) {
+      throw new Error(`Folder "${folderName}" not found`);
+    }
+    
+    // Fetch emails with this label
+    const { data } = await gmail.users.messages.list({
+      userId: 'me',
+      maxResults: 50,
+      labelIds: [label.id],
+    });
+
+    if (!data.messages || data.messages.length === 0) {
+      return [];
+    }
+
+    // Fetch full details for each email
+    const emails = await Promise.all(
+      data.messages.map(async (msg) => {
+        try {
+          const msgData = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'full' });
+          const headers = {};
+          (msgData.data.payload.headers || []).forEach(h => { headers[h.name] = h.value; });
+          
+          return {
+            emailId: msgData.data.id,
+            subject: headers.Subject || '',
+            from: headers.From || '',
+            to: headers.To || '',
+            date: headers.Date || '',
+            snippet: msgData.data.snippet || '',
+            threadId: msgData.data.threadId,
+            labels: msgData.data.labelIds || [],
+          };
+        } catch (error) {
+          console.error(`Error fetching message ${msg.id}:`, error);
+          return null;
+        }
+      })
+    );
+    
+    // Filter out any null values and sort by date (newest first)
+    const validEmails = emails.filter(email => email !== null);
+    validEmails.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateB - dateA;
+    });
+    
+    return validEmails;
+  } catch (error) {
+    console.error(`Error fetching emails for folder ${folderName}:`, error);
+    throw error;
+  }
+}
