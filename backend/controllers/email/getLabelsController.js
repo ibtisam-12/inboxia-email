@@ -8,11 +8,12 @@ export default async function getLabelsController(req, res, next) {
       return res.status(401).json({ error: 'Authentication tokens are missing' });
     }
     
-    const labels = await fetchAllLabels(accessToken, refreshToken);
+    // Get folders from database (tokens still required for consistency)
+    const folders = await fetchAllLabels(accessToken, refreshToken);
     
     res.status(200).json({
-      message: 'Labels fetched successfully',
-      labels: labels
+      message: 'Folders fetched successfully from database',
+      labels: folders
     });
   } catch (err) {
     console.error('Error in getLabelsController:', err);

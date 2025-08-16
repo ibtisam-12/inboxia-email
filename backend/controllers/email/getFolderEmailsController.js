@@ -13,10 +13,11 @@ export default async function getFolderEmailsController(req, res, next) {
       return res.status(400).json({ error: 'Folder name is required' });
     }
     
+    // Get emails from database (tokens still required for consistency)
     const emails = await fetchEmailsByFolder(accessToken, refreshToken, folderName);
     
     res.status(200).json({
-      message: `Emails fetched successfully from folder "${folderName}"`,
+      message: `Emails fetched successfully from folder "${folderName}" in database`,
       emails: emails
     });
   } catch (err) {

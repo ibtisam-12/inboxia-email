@@ -137,6 +137,9 @@ const FolderList = () => {
                         <Badge bg="info">
                           {folder.type}
                         </Badge>
+                        <Badge bg="primary" className="ms-2">
+                          📧 {folder.emailCount || 0} emails
+                        </Badge>
                       </div>
                     </div>
                     <div className="ms-2">
@@ -146,7 +149,7 @@ const FolderList = () => {
                   
                   <div className="mt-2">
                     <small className="text-muted">
-                      <strong>ID:</strong> {folder.id}
+                      <strong>Created:</strong> {folder.createdAt ? new Date(folder.createdAt).toLocaleDateString() : 'Unknown'}
                     </small>
                   </div>
                 </Card.Body>
@@ -161,7 +164,7 @@ const FolderList = () => {
           <Alert variant="success">
             <strong>✅ {folders.length} folder(s) found!</strong>
             <br />
-            Click on any folder to view the emails inside. These are your custom Gmail labels created through the Filtered Inbox feature.
+            Click on any folder to view the emails inside. These folders are managed through the database and contain emails organized by your filters.
           </Alert>
         </div>
       )}

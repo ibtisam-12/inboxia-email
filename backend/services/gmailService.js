@@ -1,6 +1,11 @@
 // services/gmailService.js
 import { google } from 'googleapis';
-import { saveProcessedEmail, isEmailProcessed } from './firebaseService.js';
+import { 
+  saveProcessedEmail, 
+  isEmailProcessed, 
+  getEmailIdsFromFolder, 
+  getAllFolders
+} from './firebaseService.js';
 
 function getGmailClient(accessToken, refreshToken) {
   // Validate that we have the required environment variables
@@ -427,118 +432,94 @@ export async function applyFiltersAndMoveToLabel(accessToken, refreshToken, emai
     
     // Filter out already processed emails
     const filteredEmails = await Promise.all(emails.map(async (email) => {
-      const isProcessed = await isEmailProcessed(email.emailId, folderName);  // Only check emailId and folderName
+      const isProcessed = await isEmailProcessed(email.emailId, folderName);
       if (isProcessed) {
         console.log(`Email ${email.emailId} already processed for folder ${folderName}, skipping.`);
-        return null;  // Skip this email
+        return null;
       }
       return email;
     }));
     
-    const emailsToProcess = filteredEmails.filter(email => email !== null);  // Remove skipped emails
-    
-    const matchingEmails = applyFilters(emailsToProcess, filters);  // Apply filters only to non-processed emails
+    const emailsToProcess = filteredEmails.filter(email => email !== null);
+    const matchingEmails = applyFilters(emailsToProcess, filters);
     
     for (const email of matchingEmails) {
-      await moveEmailToLabel(gmail, email.emailId, labelId, false);  // Don't remove from inbox
-      await saveProcessedEmail(email.emailId, folderName, filters);  // Save with filters
+      // Move email to Gmail label
+      await moveEmailToLabel(gmail, email.emailId, labelId, false);
+      
+      // Save processing record (this creates the folder automatically)
+      await saveProcessedEmail(email.emailId, folderName, filters);
     }
     
-    return matchingEmails;  // Return the list of newly processed matching emails
+    return matchingEmails;
   } catch (error) {
     console.error('Error applying filters and moving to label:', error);
     throw error;
   }
 }
 
+// Updated function to get folders from database instead of Gmail API
 export async function fetchAllLabels(accessToken, refreshToken) {
   try {
-    const gmail = getGmailClient(accessToken, refreshToken);
-    const { data } = await gmail.users.labels.list({ userId: 'me' });
+    // Get folders from database instead of Gmail API
+    const folders = await getAllFolders();
     
-    // Filter out system labels and only return user-created labels
-    const userLabels = data.labels.filter(label => 
-      label.type === 'user' && 
-      label.name !== 'INBOX' && 
-      label.name !== 'SENT' && 
-      label.name !== 'DRAFT' && 
-      label.name !== 'SPAM' && 
-      label.name !== 'TRASH' &&
-      label.name !== 'IMPORTANT' &&
-      label.name !== 'STARRED' &&
-      label.name !== 'UNREAD'
-    );
-    
-    return userLabels.map(label => ({
-      id: label.id,
-      name: label.name,
-      messageListVisibility: label.messageListVisibility,
-      labelListVisibility: label.labelListVisibility,
-      type: label.type
+    return folders.map(folder => ({
+      id: folder.name, // Use folder name as ID for database folders
+      name: folder.name,
+      messageListVisibility: 'show',
+      labelListVisibility: 'labelShow',
+      type: 'user',
+      emailCount: folder.emailCount,
+      createdAt: folder.createdAt
     }));
   } catch (error) {
-    console.error('Error fetching labels:', error);
+    console.error('Error fetching folders from database:', error);
     throw error;
   }
 }
 
+// Updated function to get email IDs from database and fetch details from Gmail API
 export async function fetchEmailsByFolder(accessToken, refreshToken, folderName) {
   try {
-    const gmail = getGmailClient(accessToken, refreshToken);
+    // Get email IDs from processedEmails database
+    const emailIds = await getEmailIdsFromFolder(folderName);
     
-    // First, get the label ID for the folder name
-    const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
-    const label = labelsData.labels.find(l => l.name === folderName);
-    
-    if (!label) {
-      throw new Error(`Folder "${folderName}" not found`);
-    }
-    
-    // Fetch emails with this label
-    const { data } = await gmail.users.messages.list({
-      userId: 'me',
-      maxResults: 50,
-      labelIds: [label.id],
-    });
-
-    if (!data.messages || data.messages.length === 0) {
+    if (emailIds.length === 0) {
       return [];
     }
-
-    // Fetch full details for each email
+    
+    // Fetch full email details from Gmail API for each email ID
+    const gmail = getGmailClient(accessToken, refreshToken);
     const emails = await Promise.all(
-      data.messages.map(async (msg) => {
+      emailIds.map(async (emailId) => {
         try {
-          const msgData = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'full' });
-          const headers = {};
-          (msgData.data.payload.headers || []).forEach(h => { headers[h.name] = h.value; });
-          
+          const emailDetails = await getEmailById(accessToken, refreshToken, emailId);
           return {
-            emailId: msgData.data.id,
-            subject: headers.Subject || '',
-            from: headers.From || '',
-            to: headers.To || '',
-            date: headers.Date || '',
-            snippet: msgData.data.snippet || '',
-            threadId: msgData.data.threadId,
-            labels: msgData.data.labelIds || [],
+            ...emailDetails,
+            labels: [folderName],
+            addedAt: new Date().toISOString() // Since we don't store this in processedEmails
           };
         } catch (error) {
-          console.error(`Error fetching message ${msg.id}:`, error);
-          return null;
+          console.error(`Error fetching email ${emailId} from Gmail API:`, error);
+          // Return a minimal email object if Gmail API fails
+          return {
+            emailId: emailId,
+            subject: 'Error loading email',
+            from: 'Unknown',
+            to: '',
+            date: '',
+            body: '',
+            snippet: 'Failed to load email from Gmail API',
+            threadId: '',
+            labels: [folderName],
+            addedAt: new Date().toISOString()
+          };
         }
       })
     );
     
-    // Filter out any null values and sort by date (newest first)
-    const validEmails = emails.filter(email => email !== null);
-    validEmails.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateB - dateA;
-    });
-    
-    return validEmails;
+    return emails;
   } catch (error) {
     console.error(`Error fetching emails for folder ${folderName}:`, error);
     throw error;
