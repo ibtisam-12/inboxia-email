@@ -331,19 +331,18 @@ Step 4: Backend checks processedEmails for duplicates
     ↓
 Step 5: Backend applies keyword filters to email content
     ↓
-Step 6: Matching emails are moved to Gmail label (folder)
+Step 6: Email IDs saved to processedEmails database (no Gmail modification)
     ↓
-Step 7: Email IDs saved to processedEmails database
+Step 7: Backend returns matching emails to frontend
     ↓
-Step 8: Backend returns matching emails to frontend
-    ↓
-Step 9: Frontend displays results and success message
+Step 8: Frontend displays results and success message
 ```
 
 **Technical Details:**
 - Keyword filtering searches both email body and headers
 - Case-insensitive matching with punctuation removal
-- Gmail labels created automatically using `ensureLabel()`
+- **Pure database-only approach** - no Gmail labels created
+- **No Gmail modification** - user's Gmail account remains unchanged
 - Duplicate prevention using Firebase `processedEmails` structure
 - Real-time feedback with email counts and success messages
 
@@ -413,6 +412,7 @@ Step 6: User can close modal and return to folder view
 - **CORS** is configured to allow only your frontend domain
 - **No email content is stored** in the backend database
 - **Only email IDs stored** for tracking and organization
+- **No Gmail modification** - user's Gmail account remains unchanged
 - **Middleware** ensures only authenticated requests are processed
 - **Firebase security rules** protect processed email tracking data
 - **Real-time data fetching** ensures no stale email content
@@ -429,7 +429,7 @@ Step 6: User can close modal and return to folder view
 - **`replyEmail()`**: Replies to existing emails
 - **`getEmailById()`**: Fetches full email details by ID
 - **`fetchUnifiedInbox()`**: Combines inbox and spam emails
-- **`applyFiltersAndMoveToLabel()`**: Filters emails and creates folders
+- **`applyFiltersAndMoveToLabel()`**: Filters emails and organizes into database folders
 - **`fetchAllLabels()`**: Gets folders from processedEmails database
 - **`fetchEmailsByFolder()`**: Gets email IDs from DB, fetches details from Gmail API
 
@@ -494,6 +494,7 @@ Step 6: User can close modal and return to folder view
 - **Real-time Content**: Email details always current from Gmail API
 - **No Stale Data**: No cached email content to maintain
 - **Accurate Information**: Always reflects current Gmail state
+- **No Gmail Modification**: User's Gmail account remains completely unchanged
 
 ### **3. Enhanced Performance**
 - **Reduced Database Size**: Only stores email IDs, not full content

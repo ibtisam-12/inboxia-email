@@ -336,53 +336,9 @@ export async function fetchFullEmailsByIds(accessToken, refreshToken, emailIds) 
 
 // services/gmailService.js (add these functions to your existing file)
 
-export async function ensureLabel(gmail, labelName) {
-  try {
-    const { data } = await gmail.users.labels.list({ userId: 'me' });
-    const existingLabel = data.labels.find(label => label.name === labelName);
-    
-    if (existingLabel) {
-      return existingLabel.id;
-    }
+// Removed ensureLabel function - no longer creating Gmail labels
 
-    const { data: newLabel } = await gmail.users.labels.create({
-      userId: 'me',
-      requestBody: {
-        name: labelName,
-        labelListVisibility: 'labelShow',
-        messageListVisibility: 'show'
-      }
-    });
-
-    return newLabel.id;
-  } catch (error) {
-    console.error(`Error ensuring label ${labelName}:`, error);
-    throw error;
-  }
-}
-
-export async function moveEmailToLabel(gmail, emailId, labelId, removeFromInbox = true) {
-  try {
-    const modifications = {
-      addLabelIds: [labelId]
-    };
-    
-    if (removeFromInbox) {
-      modifications.removeLabelIds = ['INBOX'];
-    }
-
-    await gmail.users.messages.modify({
-      userId: 'me',
-      id: emailId,
-      requestBody: modifications
-    });
-
-    return true;
-  } catch (error) {
-    console.error(`Error moving email ${emailId}:`, error);
-    return false;
-  }
-}
+// Removed moveEmailToLabel function - no longer moving emails in Gmail
 function cleanString(str) {
   if (!str) return '';
   return str.replace(/[^\w\s]/gi, '').trim().toLowerCase();  // Remove punctuation and extra spaces
@@ -427,9 +383,6 @@ export function applyFilters(emails, filters) {
 
 export async function applyFiltersAndMoveToLabel(accessToken, refreshToken, emails, filters, folderName) {
   try {
-    const gmail = getGmailClient(accessToken, refreshToken);
-    const labelId = await ensureLabel(gmail, folderName);  // Ensure the label exists
-    
     // Filter out already processed emails
     const filteredEmails = await Promise.all(emails.map(async (email) => {
       const isProcessed = await isEmailProcessed(email.emailId, folderName);
@@ -444,16 +397,14 @@ export async function applyFiltersAndMoveToLabel(accessToken, refreshToken, emai
     const matchingEmails = applyFilters(emailsToProcess, filters);
     
     for (const email of matchingEmails) {
-      // Move email to Gmail label
-      await moveEmailToLabel(gmail, email.emailId, labelId, false);
-      
-      // Save processing record (this creates the folder automatically)
+      // Save processing record (this creates the folder automatically in database)
+      // No Gmail label creation or email moving - pure database-only approach
       await saveProcessedEmail(email.emailId, folderName, filters);
     }
     
     return matchingEmails;
   } catch (error) {
-    console.error('Error applying filters and moving to label:', error);
+    console.error('Error applying filters and organizing emails:', error);
     throw error;
   }
 }
