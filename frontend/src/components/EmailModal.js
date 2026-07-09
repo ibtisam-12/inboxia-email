@@ -2,9 +2,17 @@ import React from 'react';
 import { Modal, Button, Row, Col } from 'react-bootstrap';
 
 // Place linkify function at the top
+function sanitize(text) {
+  if (!text) return '';
+  return text
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/on\w+\s*=\s*'[^']*'/gi, '');
+}
+
 function linkify(text) {
   if (!text) return '';
-  return text.replace(
+  return sanitize(text).replace(
     /(https?:\/\/[^\s]+)/g,
     url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
   );

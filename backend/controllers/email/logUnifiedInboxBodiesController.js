@@ -1,4 +1,4 @@
-import { fetchUnifiedInboxEmailIds, logFullEmailsByIds,fetchFullEmailsByIds } from '../../services/gmailService.js';
+import { fetchUnifiedInboxEmailIds, fetchFullEmailsByIds } from '../../services/gmailService.js';
 
 export default async function logUnifiedInboxBodiesController(req, res, next) {
   try {

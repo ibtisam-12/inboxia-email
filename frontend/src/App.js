@@ -6,10 +6,12 @@ import store from './store';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import { Container, Card } from 'react-bootstrap';
 
 const App = () => (
   <Provider store={store}>
+    <ErrorBoundary>
     <Router>
       <div className="App">
         <Routes>
@@ -51,6 +53,7 @@ const App = () => (
         </Routes>
       </div>
     </Router>
+    </ErrorBoundary>
   </Provider>
 );
 

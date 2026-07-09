@@ -26,7 +26,8 @@ const ComposeEmail = () => {
       });
       setTo(''); setSubject(''); setBody('');
       alert('Email sent successfully!');
-    } catch {
+    } catch (error) {
+      console.error('Failed to send email:', error);
       dispatch(setSendEmailError('Failed to send email.'));
     } finally {
       dispatch(setSendingEmail(false));

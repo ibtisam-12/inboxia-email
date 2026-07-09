@@ -153,17 +153,7 @@ export async function getEmailById(accessToken, refreshToken, emailId) {
 async function fetchEmailsByLabel(accessToken, refreshToken, label) {
   try {
     const gmail = getGmailClient(accessToken, refreshToken);
-    
-    // Try different approaches for accessing spam emails
-    let query;
-    if (label === 'spam') {
-      // Try multiple approaches for spam emails
-      query = 'in:spam';
-      console.log(`Fetching spam emails with query: ${query}`);
-    } else {
-      query = `in:${label}`;
-      console.log(`Fetching emails with query: ${query}`);
-    }
+    let query = label === 'spam' ? 'in:spam' : `in:${label}`;
     
     const { data } = await gmail.users.messages.list({
       userId: 'me',
@@ -171,8 +161,6 @@ async function fetchEmailsByLabel(accessToken, refreshToken, label) {
       q: query,
     });
 
-    console.log(`Found ${data.messages ? data.messages.length : 0} messages in ${label}`);
-    
     if (!data.messages) return [];
 
     const messages = await Promise.all(
@@ -189,7 +177,7 @@ async function fetchEmailsByLabel(accessToken, refreshToken, label) {
             date: headers.Date || '',
             snippet: msgData.data.snippet || '',
             threadId: msgData.data.threadId,
-            source: label // "inbox" or "spam"
+            source: label
           };
         } catch (error) {
           console.error(`Error fetching message ${msg.id}:`, error);
@@ -198,9 +186,6 @@ async function fetchEmailsByLabel(accessToken, refreshToken, label) {
       })
     );
     
-    console.log(`Successfully fetched ${messages.filter(m => m !== null).length} messages from ${label}`);
-    
-    // Filter out any null values from failed message fetches
     return messages.filter(message => message !== null);
   } catch (error) {
     console.error(`Error fetching emails for label ${label}:`, error);
@@ -210,13 +195,10 @@ async function fetchEmailsByLabel(accessToken, refreshToken, label) {
 
 export async function fetchUnifiedInbox(accessToken, refreshToken) {
   try {
-    console.log('Fetching unified inbox');
     const [inboxEmails, spamEmails] = await Promise.all([
       fetchEmailsByLabel(accessToken, refreshToken, 'inbox'),
-      fetchEmailsByLabel(accessToken, refreshToken, 'spam')  // Using lowercase 'spam'
+      fetchEmailsByLabel(accessToken, refreshToken, 'spam')
     ]);
-
-    console.log(`Fetched ${inboxEmails.length} inbox emails and ${spamEmails.length} spam emails`);
     
     // Merge and remove duplicates by emailId
     const allEmails = [...inboxEmails, ...spamEmails];
@@ -243,10 +225,8 @@ export async function fetchUnifiedInbox(accessToken, refreshToken) {
       return dateB - dateA;
     });
     
-    // Limit to first 50 emails after sorting
     result = result.slice(0, 50);
     
-    console.log(`Returning ${result.length} unique emails in unified inbox (sorted by date, limited to 50)`);
     return result;
   } catch (error) {
     console.error('Error fetching unified inbox:', error);
@@ -264,9 +244,9 @@ export async function fetchUnifiedInboxEmailIds(accessToken, refreshToken) {
   return uniqueEmailIds;
 }
 
-// For each email ID, fetch and log full body + headers
-export async function logFullEmailsByIds(accessToken, refreshToken, emailIds) {
+export async function fetchFullEmailsByIds(accessToken, refreshToken, emailIds) {
   const gmail = getGmailClient(accessToken, refreshToken);
+  const emails = [];
 
   for (const id of emailIds) {
     try {
@@ -274,7 +254,6 @@ export async function logFullEmailsByIds(accessToken, refreshToken, emailIds) {
       const headers = {};
       (msgData.data.payload.headers || []).forEach(h => { headers[h.name] = h.value; });
 
-      // Extract plain text body
       let body = '';
       if (msgData.data.payload.parts) {
         const part = msgData.data.payload.parts.find(p => p.mimeType === 'text/plain');
@@ -285,60 +264,19 @@ export async function logFullEmailsByIds(accessToken, refreshToken, emailIds) {
         body = Buffer.from(msgData.data.payload.body.data, 'base64').toString('utf-8');
       }
 
-      // Log full body and headers
-      console.log('Email:', {
+      emails.push({
         emailId: msgData.data.id,
         headers,
         body
       });
     } catch (error) {
       console.error(`Error fetching message ${id}:`, error);
-    }
-  }
-}
-
-export async function fetchFullEmailsByIds(accessToken, refreshToken, emailIds) {
-  const gmail = getGmailClient(accessToken, refreshToken); // Get the Gmail client with tokens
-  const emails = []; // Array to store email data
-
-  for (const id of emailIds) {
-    try {
-      const msgData = await gmail.users.messages.get({ userId: 'me', id, format: 'full' });
-      const headers = {};
-      (msgData.data.payload.headers || []).forEach(h => { headers[h.name] = h.value; });
-
-      // Extract plain text body
-      let body = '';
-      if (msgData.data.payload.parts) {
-        const part = msgData.data.payload.parts.find(p => p.mimeType === 'text/plain');
-        if (part && part.body && part.body.data) {
-          body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-        }
-      } else if (msgData.data.payload.body && msgData.data.payload.body.data) {
-        body = Buffer.from(msgData.data.payload.body.data, 'base64').toString('utf-8');
-      }
-
-      // Add the email data to the array
-      emails.push({
-        emailId: msgData.data.id,
-        headers, // Object with all headers
-        body // Plain text body
-      });
-    } catch (error) {
-      console.error(`Error fetching message ${id}:`, error); // Optional: Keep logging for debugging
-      // Add an error entry to the array for robustness
       emails.push({ emailId: id, error: error.message });
     }
   }
 
-  return emails; // Return the array of email objects
+  return emails;
 }
-
-// services/gmailService.js (add these functions to your existing file)
-
-// Removed ensureLabel function - no longer creating Gmail labels
-
-// Removed moveEmailToLabel function - no longer moving emails in Gmail
 function cleanString(str) {
   if (!str) return '';
   return str.replace(/[^\w\s]/gi, '').trim().toLowerCase();  // Remove punctuation and extra spaces
@@ -346,38 +284,30 @@ function cleanString(str) {
 
 export function applyFilters(emails, filters) {
   if (!emails || emails.length === 0) {
-    console.log('No emails provided to applyFilters');
     return [];
   }
   
-  const { keywords } = filters;  // Expect keywords as a string, e.g., "hiring,internship"
+  const { keywords } = filters;
   const keywordArray = Array.isArray(keywords) ? keywords : (keywords ? keywords.split(',') : []);
-  const keywordArrayCleaned = keywordArray.map(keyword => cleanString(keyword));  // Clean each keyword
-  
-  console.log('Applying filters with cleaned keywords:', keywordArrayCleaned);  // Log cleaned keywords
+  const keywordArrayCleaned = keywordArray.map(keyword => cleanString(keyword));
   
   if (keywordArrayCleaned.length === 0 || keywordArrayCleaned.every(k => k === '')) {
-    console.log('No valid keywords provided, returning empty array');
-    return [];  // Return empty array to enforce filters
+    return [];
   }
   
   return emails.filter(email => {
-    const bodyCleaned = cleanString(email.body || '');  // Clean the body
+    const bodyCleaned = cleanString(email.body || '');
     const headersString = Object.values(email.headers || {})
-      .map(header => cleanString(header))  // Clean each header
-      .join(' ');  // Join into a single string
-    
-    console.log(`Checking email ${email.emailId}: Cleaned Body: "${bodyCleaned.substring(0, 50)}..." Cleaned Headers: "${headersString.substring(0, 50)}..."`);
+      .map(header => cleanString(header))
+      .join(' ');
     
     for (const keyword of keywordArrayCleaned) {
       if (keyword && (bodyCleaned.includes(keyword) || headersString.includes(keyword))) {
-        console.log(`Match found for keyword "${keyword}" in email ${email.emailId}`);
-        return true;  // At least one match
+        return true;
       }
     }
     
-    console.log(`No matches for email ${email.emailId}`);
-    return false;  // No matches
+    return false;
   });
 }
 
@@ -387,7 +317,6 @@ export async function applyFiltersAndMoveToLabel(accessToken, refreshToken, emai
     const filteredEmails = await Promise.all(emails.map(async (email) => {
       const isProcessed = await isEmailProcessed(email.emailId, folderName);
       if (isProcessed) {
-        console.log(`Email ${email.emailId} already processed for folder ${folderName}, skipping.`);
         return null;
       }
       return email;

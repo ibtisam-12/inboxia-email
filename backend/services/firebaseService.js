@@ -18,8 +18,8 @@ export async function saveProcessedEmail(emailId, folderName, filters) {
   const key = `${emailId}_${folderName}`;
   const processedRef = ref(database, `processedEmails/${key}`);
   await set(processedRef, { emailId, folderName, filters });
-  console.log(`Saved processed email: ${key} with filters ${JSON.stringify(filters)}`);
-}
+  }
+
 
 export async function isEmailProcessed(emailId, folderName) {
   const key = `${emailId}_${folderName}`;
@@ -84,25 +84,20 @@ export async function getEmailIdsFromFolder(folderName) {
 // Keep these for backward compatibility but they're now no-ops
 export async function saveEmailToFolder(emailId, folderName, emailData) {
   // No longer storing email data in folders structure
-  console.log(`Email ${emailId} will be fetched from Gmail API when needed`);
 }
 
 export async function getEmailsFromFolder(folderName) {
-  // This function is now handled by getEmailIdsFromFolder + Gmail API
-  console.log(`Getting email IDs for folder ${folderName} from processedEmails`);
   return getEmailIdsFromFolder(folderName);
 }
 
 export async function createFolder(folderName) {
   // Folders are created automatically when first email is processed
-  console.log(`Folder ${folderName} will be created when first email is processed`);
 }
 
 export async function removeEmailFromFolder(emailId, folderName) {
   const key = `${emailId}_${folderName}`;
   const processedRef = ref(database, `processedEmails/${key}`);
   await remove(processedRef);
-  console.log(`Removed email ${emailId} from folder ${folderName}`);
 }
 
 export async function deleteFolder(folderName) {
@@ -122,9 +117,7 @@ export async function deleteFolder(folderName) {
   });
   
   // Remove all processed emails for this folder
-  const dbRef = ref(database);
-  await set(dbRef, updates);
-  console.log(`Deleted folder: ${folderName}`);
+  await update(ref(database), updates);
 }
 
 export async function getFolderStats(folderName) {
