@@ -94,4 +94,4 @@ inboxia-email/
 
 ## License
 
-[ISC](https://opensource.org/licenses/ISC)
+[MIT](https://opensource.org/licenses/MIT)
