@@ -21,6 +21,14 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm install
       - run: npm test
+        env:
+          API_KEY: test-api-key
+          AUTH_DOMAIN: test.firebaseapp.com
+          DATABASE_URL: https://test.firebaseio.com
+          PROJECT_ID: test-project
+          STORAGE_BUCKET: test.appspot.com
+          MESSAGING_SENDER_ID: '000000000000'
+          APP_ID: '1:000000000000:web:000000000000'
 
   frontend:
     runs-on: ubuntu-latest
